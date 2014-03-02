@@ -15,12 +15,14 @@ var client = new OPC('192.168.2.1', 7890);
 
 
 console.log(opts);
-
-var files = fs.readdirSync(TMP_DIR);
-files.forEach(function(f) {
-	fs.unlink(TMP_DIR + '/' + f);
-})
-fs.rmdirSync(TMP_DIR);
+try {
+	var files = fs.readdirSync(TMP_DIR);
+	files.forEach(function(f) {
+		fs.unlink(TMP_DIR + '/' + f);
+	})
+	fs.rmdirSync(TMP_DIR);
+}
+catch (err) {}
 fs.mkdirSync(TMP_DIR);
 
 var imageMagick = gm.subClass({ imageMagick: true });
