@@ -3,7 +3,10 @@ var fs = require('fs')
   , gm = require('gm')
   , PNG = require('pngjs').PNG
   , async = require('async')
+  , validator = require('validator')
   , tmp = require('tmp');
+
+var getter = require('http-get');
 
 var imageMagick = gm.subClass({ imageMagick: true });
 tmp.setGracefulCleanup();
@@ -17,7 +20,7 @@ var events = require("events");
 function GIF(filename) {
     Readable.call(this);
 
-    console.log(filename);
+    // console.log(filename);
 
     this._filename = filename;
     this._isReady = false;
@@ -53,18 +56,47 @@ GIF.prototype._read = function() {
 
 
 GIF.prototype.init = function(cb) {
+	console.log ("FILE NAME");
 	console.log(this._filename);
 	var self = this;
-	GIF.frames(self._filename, function(err, frames) {
-		if (err) throw err;
-		GIF.frameRate(self._filename, function(e, rate) {
-			if (e) throw e;
-			self._frames = frames;
-			self._frameRate = rate;
-			self._isReady = true;
-			cb();
+
+
+	if (validator.isURL(this._filename)) {
+		tmp.tmpName(function(tmpErr, path){
+			if (tmpErr) return cb(tmpErr);
+
+			console.log("URL!");
+			var options = {url: self._filename};
+			getter.get(options, path, function (error, result) {
+			    if (error) {
+			        console.error(error);
+			    } else {
+			        console.log('File downloaded at: ' + result.file);
+			        self._filename = result.file;
+			        self.init(cb);
+			    }
+			});
+
+
 		});
-	});
+
+
+
+	}
+	else {
+		GIF.frames(self._filename, function(err, frames) {
+			if (err) throw err;
+			GIF.frameRate(self._filename, function(e, rate) {
+				if (e) throw e;
+				self._frames = frames;
+				self._frameRate = rate;
+				self._isReady = true;
+				cb();
+			});
+		});
+
+	}
+
 }
 
 

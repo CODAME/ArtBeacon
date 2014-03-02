@@ -2,6 +2,7 @@
 
 var async = require('async')
   , opts = require("nomnom").parse()
+  , validator = require('validator')
   , gifFrames = require('./gif-frames');
 
 
@@ -16,22 +17,26 @@ var pixels = [];
 
 var gifName = opts['0'] || './codame.gif';
 
-gifName = __dirname + "/" + gifName;
 
-var counter = 0;
-var images = [];
+if (!validator.isURL(gifName)) {
+	gifName = __dirname + "/" + gifName;
+}
+
+
+// var counter = 0;
+// var images = [];
 
 
 
-gifFrames.frames(gifName, function(err, frames) {
-	if (err) throw err;
-	gifFrames.frameRate(gifName, function(e, rate) {
-		if (e) throw e;
-		var frameDelay = opts['1'] ? parseInt(opts['1'], 10) : rate;
-		console.log("framerate: " + rate);
-		play(frames, rate);
-	});
-});
+// gifFrames.frames(gifName, function(err, frames) {
+// 	if (err) throw err;
+// 	gifFrames.frameRate(gifName, function(e, rate) {
+// 		if (e) throw e;
+// 		var frameDelay = opts['1'] ? parseInt(opts['1'], 10) : rate;
+// 		console.log("framerate: " + rate);
+// 		play(frames, rate);
+// 	});
+// });
 
 
 
@@ -113,7 +118,7 @@ function play(images, framerate) {
 	var prevTime = Date.now();
 	gifff.on('data', function(data) {
 		var curTime = Date.now();
-		console.log(curTime - prevTime);
+		// console.log(curTime - prevTime);
 		px = JSON.parse(data);
 		drawFrame(px);
 		prevTime = curTime;
@@ -124,3 +129,6 @@ function play(images, framerate) {
 	// setTimeout(gifff.play, 2000);
 
 }
+
+
+play();
