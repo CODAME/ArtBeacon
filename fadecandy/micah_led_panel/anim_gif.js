@@ -1,171 +1,75 @@
 #!/usr/bin/env node
 
+
 var fs = require('fs')
   , gm = require('gm')
   , PNG = require('pngjs').PNG
-  , async = require('async');
+  , async = require('async')
+  , opts = require("nomnom").parse()
+  , TMP_DIR = "./tmp";
+
+
+var OPC = new require('./opc')
+var client = new OPC('192.168.2.1', 7890);
+
+
+
+console.log(opts);
+
+var files = fs.readdirSync(TMP_DIR);
+files.forEach(function(f) {
+	fs.unlink(TMP_DIR + '/' + f);
+})
+fs.rmdirSync(TMP_DIR);
+fs.mkdirSync(TMP_DIR);
 
 var imageMagick = gm.subClass({ imageMagick: true });
 
 var pixels = [];
 
-// async.until(function() {})
 
+var gifName = opts['0'] || './codame.gif';
 
-// var lastScene = "";
+imageMagick(gifName).resize(16, 32, "!").write(TMP_DIR + '/frames.png', function(e) {
+	var files = fs.readdirSync(TMP_DIR);
 
-// pull out the first frame of an animated gif and save as png
-// gm('./spaceghost.gif').resize(16, 32, "!").identify(function(err, data) {
-// 	console.log(data);
-// });
+	async.each(files, function(file, next) {
+		if (file.indexOf('.png') === -1) {
+			return next();
+		}
+		console.log("creating stream for " + file);
+		fs.createReadStream(TMP_DIR + '/' + file)
+		    .pipe(new PNG({
+		        filterType: 4
+		    }))
+		    .on('parsed', function() {
+		    	var px = []
+		        for (var y = 0; y < this.height; y++) {
+		            for (var x = 0; x < this.width; x++) {
+		                var idx = (this.width * y + x) << 2;
+		                px.push([this.data[idx], this.data[idx+1], this.data[idx+2]])
 
+		            }
+		        }
+		        images.push(px);
+		        next();
+		    });
 
-// gm().in('./spaceghost.gif').out('./tmp/foo.png').stream();
-imageMagick('./codame.gif').resize(16, 32, "!").write('./tmp/frames.png', function(e) {
+	}, function(err) {
+		start(images);
+	});
 
 });
 
 var counter = 0;
-
 var images = [];
 
+var frameDelay = parseInt(opts['1'], 10) || 200;
 
-
-var files = fs.readdirSync('./tmp');
-
-
-async.each(files, function(file, next) {
-	console.log("opening file "  + file + '   ' + file.indexOf('.png'));
-	if (file.indexOf('.png') === -1) {
-		console.log(file + " didn't pass")
-		return next();
-	}
-	console.log("creating stream for " + file);
-	fs.createReadStream("./tmp/" + file)
-	    .pipe(new PNG({
-	        filterType: 4
-	    }))
-	    .on('parsed', function() {
-	    	// console.log(this.data);
-	    	var px = []
-	    	// console.log(this.data.length);
-	        for (var y = 0; y < this.height; y++) {
-	            for (var x = 0; x < this.width; x++) {
-	                var idx = (this.width * y + x) << 2;
-	                px.push([this.data[idx], this.data[idx+1], this.data[idx+2]])
-
-	            }
-	        }
-	        images.push(px);
-	        // console.log(images);
-	        next();
-	    });
-
-
-}, function(err) {
-	start(images);
+gm(gifName).identify( function(err, data) {
+	frameDelay = parseInt(data.Delay, 10);
+	// console.log(data);
 });
-/*
-	fs.createReadStream('./tmp/spaceghost/30.png')
-	    .pipe(new PNG({
-	        filterType: 4
-	    }))
-	    .on('parsed', function() {
-	    	// console.log(this.data);
-
-	    	// console.log(this.data.length);
-	        for (var y = 0; y < this.height; y++) {
-	            for (var x = 0; x < this.width; x++) {
-	                var idx = (this.width * y + x) << 2;
-
-	                pixels.push([this.data[idx], this.data[idx+1], this.data[idx+2]])
-	                // // invert color
-	                // this.data[idx] = 255 - this.data[idx];
-	                // this.data[idx+1] = 255 - this.data[idx+1];
-	                // this.data[idx+2] = 255 - this.data[idx+2];
-
-	                // // and reduce opacity
-	                // this.data[idx+3] = this.data[idx+3] >> 1;
-	            }
-	        }
-
-	        // this.pack().pipe(fs.createWriteStream('./tmp/spaceghost.0-1.png'));
-	        
-	        // console.log(pixels);
-	        // console.log(pixels.length)
-	    });
-
-
-
-
-
-gm('./spaceghost.gif[30]').resize(16, 32, "!").write('./tmp/spaceghost/30.png', function(e) {
-	if (e) throw e;
-
-
-
-	fs.createReadStream('./tmp/spaceghost/30.png')
-	    .pipe(new PNG({
-	        filterType: 4
-	    }))
-	    .on('parsed', function() {
-	    	// console.log(this.data);
-
-	    	// console.log(this.data.length);
-	        for (var y = 0; y < this.height; y++) {
-	            for (var x = 0; x < this.width; x++) {
-	                var idx = (this.width * y + x) << 2;
-
-	                pixels.push([this.data[idx], this.data[idx+1], this.data[idx+2]])
-	                // // invert color
-	                // this.data[idx] = 255 - this.data[idx];
-	                // this.data[idx+1] = 255 - this.data[idx+1];
-	                // this.data[idx+2] = 255 - this.data[idx+2];
-
-	                // // and reduce opacity
-	                // this.data[idx+3] = this.data[idx+3] >> 1;
-	            }
-	        }
-
-	        // this.pack().pipe(fs.createWriteStream('./tmp/spaceghost.0-1.png'));
-	        
-	        // console.log(pixels);
-	        // console.log(pixels.length)
-	    });
-
-
-
-	// gm('./tmp/spaceghost.0.png').identify( function(err, data) {
-	// 	if (err) throw err;
-	// 	console.log(data);
-	// 	var colors = data.Colors;
-
-	// 	var pixels = new Array(Object.keys(data.Colors).length);
-
-	// 	for (var prop in colors) {
-	// 		var idx = prop;
-	// 		var fullStr = colors[prop];
-	// 		var matches = fullStr.match(/\((.*)\)/);
-	// 		if (matches && matches.length > 0) {
-	// 			var rgba = matches[1].split(",");
-	// 			rgba.pop();
-	// 			// console.log(rgba);
-	// 			pixels[parseInt(prop)] = rgba.map(function(colorVals) {
-	// 				return colorVals.trim();
-	// 			})
-	// 		}
-	// 	}
-	// 	console.log(pixels);
-	// 	console.log(data.size);
-	// 	console.log(pixels.length)
-	// });
-
-
-})
-
-
-
-*/
 
 
 
@@ -176,21 +80,6 @@ gm('./spaceghost.gif[30]').resize(16, 32, "!").write('./tmp/spaceghost/30.png', 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-// Simple red/blue fade with Node and opc.js
-
-var OPC = new require('./opc')
-var client = new OPC('192.168.2.1', 7890);
 
 var imgData = [
 [29,0,27], [28,0,26], [29,0,28], [26,0,24], [26,0,24], [28,0,26], [26,0,25], [23,0,22], [25,0,24], [25,0,24], [23,0,21], [23,0,21], [20,0,20], [26,0,24], [23,0,22], [22,0,20],
@@ -275,30 +164,13 @@ var imgData = [
     [56,55,40,39,24,23, 8, 7]
  ];
  
- var codameText = [
-  [0,1,1,0,0, 0,1,1,0,0,  1,1,1,0,0, 0,1,1,0,0,  1,0,0,0,1, 0,1,1,1,1,  0,0,0,0,0, 0,1,1,0,0,  1,1,1,0,0, 1,1,1,1,1,  0,0,0,0,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,1,1,1,  0,1,0,0,1, 0,0,0,0,0,  0,0,0,0,0],
-  [1,0,0,1,0, 1,0,0,1,0,  1,0,0,1,0, 1,0,0,1,0,  1,1,0,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0,0,1,0,  1,0,0,1,0, 0,0,1,0,0,  0,0,1,0,0, 0,0,1,0,0,  0,1,0,0,0, 0,1,0,0,0,  0,1,0,0,1, 0,0,0,0,0,  0,0,0,0,0],
-  [1,0,0,0,0, 1,0,0,1,0,  1,0,0,1,0, 1,1,1,1,0,  1,0,1,0,1, 0,1,1,1,0,  0,0,0,0,0, 1,1,1,1,0,  1,1,1,1,0, 0,0,1,0,0,  0,1,1,1,0, 0,0,1,0,0,  0,1,1,1,0, 0,1,0,0,0,  0,1,1,1,1, 0,0,0,0,0,  0,0,0,0,0],
-  [1,0,0,1,0, 1,0,0,1,0,  1,0,0,1,0, 1,0,0,1,0,  1,0,0,0,1, 0,1,0,0,0,  0,0,0,0,0, 1,0,0,1,0,  1,0,1,0,0, 0,0,1,0,0,  0,0,1,0,0, 0,0,1,0,0,  0,1,0,0,0, 0,1,0,0,0,  0,1,0,0,1, 0,0,0,0,0,  0,0,0,0,0],
-  [0,1,1,0,0, 0,1,1,0,0,  1,1,1,0,0, 1,0,0,1,0,  1,0,0,0,1, 0,1,1,1,1,  0,0,0,0,0, 1,0,0,1,0,  1,0,0,1,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,1,0,0,  0,1,1,1,1, 0,0,1,1,1,  0,1,0,0,1, 0,0,0,0,0,  0,0,0,0,0],
- ];
- var codameTextDims = {
-   width: 85,
-   height: 5
- };
- var codameTextPos = {
-   x: 0,
-   y: 0
- };
- var codameTextColor = {red:180, green:255, blue:180};
- 
+
  var imgCoordinateMap = [];
  for (var y = 0; y < 32; y++) {
    for (var x = 0; x < 16; x++) {
-     var i = x + (y * 16);           //0..3  0..1
+     var i = x + (y * 16);
      var panelOffset = panelOffsetMap[Math.floor(y/8)][Math.floor(x/8)];
      var panelIndex = panelIndexMap[y%8][x%8];
-     // var panelIndex = pixels[x+(y*8)];
      imgCoordinateMap[i] = panelOffset + panelIndex;
    }
  }
@@ -318,22 +190,10 @@ function draw(data) {
             green = data[pixel][1],
             blue =  data[pixel][2];
 
-		/*
-        if (x < codameTextDims.width && y < codameTextDims.height) {
-          var textX = x, textY = y;
-          if (codameText[y][x + textXOffset] == 0) {
-            red +=    codameTextColor.red;
-            green +=  codameTextColor.green;
-            blue +=   codameTextColor.blue;
-          }
-        }
-        */
-
         client.setPixel(imgCoordinateMap[pixel], red * brightness, green * brightness, blue * brightness);
     }
     client.writePixels();
     
-    textXOffset = (textXOffset + 1) % codameTextDims.width;
 }
 
 imgData = pixels;
@@ -354,7 +214,7 @@ function start(images, framerate) {
 			frame = 0;
 		}
 		px = images[frame];
-	}, 100);
+	}, frameDelay);
 
 
 }
