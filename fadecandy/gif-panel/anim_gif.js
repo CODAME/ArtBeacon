@@ -16,10 +16,10 @@ var pixels = [];
 
 var gifName = opts['0'] || './codame.gif';
 
+gifName = __dirname + "/" + gifName;
+
 var counter = 0;
 var images = [];
-
-
 
 
 
@@ -28,6 +28,7 @@ gifFrames.frames(gifName, function(err, frames) {
 	gifFrames.frameRate(gifName, function(e, rate) {
 		if (e) throw e;
 		var frameDelay = opts['1'] ? parseInt(opts['1'], 10) : rate;
+		console.log("framerate: " + rate);
 		play(frames, rate);
 	});
 });
@@ -70,38 +71,56 @@ for (var y = 0; y < 32; y++) {
 
  
 function drawFrame(data) {
+	if (data && data.length == 512) {
+	    for (var pixel = 0; pixel < 512; pixel++) {
+	        var x = pixel % 16,
+	            y = Math.floor(pixel / 16);
+	            
+	        var red =   data[pixel][0],
+	            green = data[pixel][1],
+	            blue =  data[pixel][2];
 
-    for (var pixel = 0; pixel < 512; pixel++) {
-        var x = pixel % 16,
-            y = Math.floor(pixel / 16);
-            
-        var red =   data[pixel][0],
-            green = data[pixel][1],
-            blue =  data[pixel][2];
+	        client.setPixel(imgCoordinateMap[pixel], red * brightness, green * brightness, blue * brightness);
+	    }
+	    client.writePixels();
+	}
 
-        client.setPixel(imgCoordinateMap[pixel], red * brightness, green * brightness, blue * brightness);
-    }
-    client.writePixels();
 }
 
 
 
 function play(images, framerate) {
-	var frame = 0;
-	var px = images[0];
-	setInterval(function() {
+	// var frame = 0;
+	// var px = []; //images[0];
+	// setInterval(function() {
+	// 	drawFrame(px);
+	// }, 1000/framesPerSecond);
+
+	// process.nextTick(function() {
+	// 	setInterval(function() {
+	// 		frame++;
+	// 		if (frame >= images.length) {
+	// 			frame = 0;
+	// 		}
+	// 		px = images[frame];
+	// 	}, framerate);
+	// });
+
+
+
+	var gifff = new gifFrames(gifName);
+
+	var prevTime = Date.now();
+	gifff.on('data', function(data) {
+		var curTime = Date.now();
+		console.log(curTime - prevTime);
+		px = JSON.parse(data);
 		drawFrame(px);
-	}, 1000/framesPerSecond);
+		prevTime = curTime;
+	})
 
-	process.nextTick(function() {
-		setInterval(function() {
-			frame++;
-			if (frame >= images.length) {
-				frame = 0;
-			}
-			px = images[frame];
-		}, framerate);
-	});
+	// setTimeout(gifff.pause, 1000);
 
+	// setTimeout(gifff.play, 2000);
 
 }

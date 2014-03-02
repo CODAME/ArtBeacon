@@ -10,7 +10,101 @@ tmp.setGracefulCleanup();
 
 
 
-module.exports.frames = function frames(gifName, cb) {
+var Readable = require('stream').Readable;
+var util = require("util");
+var events = require("events");
+
+function GIF(filename) {
+    Readable.call(this);
+
+    console.log(filename);
+
+    this._filename = filename;
+    this._isReady = false;
+    this._currentFrameIndex = -1;
+    this._currentFrame = null;
+    this._frames = [];
+    this._frameRate = 250;
+    this._interval = null;
+    this._isStale = true;
+    this.init(this.play.bind(this));
+}
+
+util.inherits(GIF, Readable);
+
+GIF.prototype._read = function() {
+
+	return this.push('');
+
+    // this.push(this._currentFrame ? JSON.parse(this._currentFrame) : null)
+    if (this._isReady && this._isStale && this._frames.length > 0 && this._currentFrame) {
+    	// console.log(this._frames[this._currentFrame]);
+    	this.push(JSON.stringify(this._currentFrame));
+    	this._isStale = false;
+    	console.log("was stale");
+    }
+    else {
+    	this.push('');
+    }
+    // else {
+    // 	this.push(null);
+    // }
+}
+
+
+GIF.prototype.init = function(cb) {
+	console.log(this._filename);
+	var self = this;
+	GIF.frames(self._filename, function(err, frames) {
+		if (err) throw err;
+		GIF.frameRate(self._filename, function(e, rate) {
+			if (e) throw e;
+			self._frames = frames;
+			self._frameRate = rate;
+			self._isReady = true;
+			cb();
+		});
+	});
+}
+
+
+GIF.prototype.advanceFrame = function() {
+
+	this._currentFrameIndex++;
+	if (this._currentFrameIndex >= this._frames.length) {
+		this._currentFrameIndex = 0;
+	}
+	this._currentFrame = this._frames[this._currentFrameIndex];
+	// this.read(0);
+
+	// console.log("advanced frame " + this._frameRate);
+	this.push(JSON.stringify(this._currentFrame));
+	this._isStale = true;
+
+	// console.log(this._frames[this._currentFrameIndex]);
+
+	// console.log(this._currentFrameIndex);
+}
+
+GIF.prototype.pause = function() {
+	clearInterval(this._interval);
+}
+
+GIF.prototype.play = function() {
+	this.advanceFrame();
+	this._interval = setInterval(this.advanceFrame.bind(this), this._frameRate);
+
+    // this.push(this._currentFrame ? JSON.parse(this._currentFrame) : null)
+    // if (this._isReady) {
+    // 	this.push(JSON.parse(this._frames[this._currentFrame]));
+    // }
+    // else {
+    // 	this.push(null);
+    // }
+}
+
+
+GIF.frames = function(gifName, cb) {
 
 	tmp.dir(function(tmpErr, tmpDir){
 		if (tmpErr) return cb(tmpErr);
@@ -52,13 +146,15 @@ module.exports.frames = function frames(gifName, cb) {
 
 };
 
-module.exports.frameRate = function frameRate(gifName, cb) {
+GIF.frameRate = function(gifName, cb) {
 	gm(gifName).identify(function(err, data) {
+		console.log(data);
 		if (err) {
 			return cb(err);
 		}
 		try {
-			frameDelay = parseInt(data.Delay, 10);
+			// console.log(data);
+			frameDelay = parseInt(data.Delay, 10) * 10;
 			cb(null, frameDelay);
 		}
 		catch (parseErr) {
@@ -68,4 +164,6 @@ module.exports.frameRate = function frameRate(gifName, cb) {
 };
 
 
-module.exports.stream = function(gifName, cb) {}
+module.exports = GIF;
+
+// module.exports.stream = function(gifName, cb) {}
