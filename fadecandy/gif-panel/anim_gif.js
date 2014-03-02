@@ -3,45 +3,54 @@
 var async = require('async')
   , opts = require("nomnom").parse()
   , validator = require('validator')
-  , gifFrames = require('./gif-frames');
+  , gifFrames = require('./gif-frames'),
+  sys = require("util"),
+  url = require("url"),
+  qs = require("querystring");
 
 
 var OPC = new require('./opc')
 var client = new OPC('localhost', 7890);
+
+//default asset index
+var currentAsset = 0;
+
+//create a http server to listen for the asset variable
+var http = require('http');
+http.createServer(function (req, res) {
+	if(req.method=="GET") {
+	  var variables = url.parse(req.url, true).query;
+	  var pathname = url.parse(req.url).pathname;
+	 }
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  if (variables['asset_id'])
+  {
+  	currentAsset = parseInt(variables['asset_id']);
+  	console.log('--------------------using asset #' + currentAsset);
+  }
+  res.end('Hello World\n' + variables['asset_id']);
+}).listen(1337, '172.16.2.149');
 
 var brightness = 0.3;
 var framesPerSecond = 10;
 
 var pixels = [];
 
+//create array to store asset urls
+var assets = opts._;
 
-var gifName = opts['0'] || './codame.gif';
+//add the default image at index 0
+assets.unshift('http://24.media.tumblr.com/tumblr_madr3yubUn1qiq4cjo1_500.gif');
 
-
-if (!validator.isURL(gifName)) {
-	gifName = __dirname + "/" + gifName;
+//add the passed asset urls to the assets array
+for(var a = 0; a<assets.length; a++)
+{
+	console.log(a + ': ' + assets[a]);
+	assets[a] = assets[a] || './codameAsset' + a + '.gif';
+	if (!validator.isURL(assets[a])) {
+		assets[a] = __dirname + "/" + assets[a];
+	}
 }
-
-
-// var counter = 0;
-// var images = [];
-
-
-
-// gifFrames.frames(gifName, function(err, frames) {
-// 	if (err) throw err;
-// 	gifFrames.frameRate(gifName, function(e, rate) {
-// 		if (e) throw e;
-// 		var frameDelay = opts['1'] ? parseInt(opts['1'], 10) : rate;
-// 		console.log("framerate: " + rate);
-// 		play(frames, rate);
-// 	});
-// });
-
-
-
-
-
 
 var panelOffsetMap = [
    [256, 0],
@@ -61,7 +70,6 @@ var panelIndexMap = [
     [56,55,40,39,24,23, 8, 7]
  ];
  
-
 var imgCoordinateMap = [];
 
 for (var y = 0; y < 32; y++) {
@@ -72,7 +80,6 @@ for (var y = 0; y < 32; y++) {
 		imgCoordinateMap[i] = panelOffset + panelIndex;
     }
 }
- 
 
  
 function drawFrame(data) {
@@ -111,22 +118,28 @@ function play(images, framerate) {
 	// 	}, framerate);
 	// });
 
+	//show current asset
+	var handler = function(index) {
+		return function(data) {
+			if (currentAsset == index)
+			{
+				var curTime = Date.now();
+				// console.log(curTime - prevTime);
+				px = JSON.parse(data);
+				drawFrame(px);
+				prevTime = curTime;
+			}
+		}
+	}
 
-
-	var gifff = new gifFrames(gifName);
-
-	var prevTime = Date.now();
-	gifff.on('data', function(data) {
-		var curTime = Date.now();
-		// console.log(curTime - prevTime);
-		px = JSON.parse(data);
-		drawFrame(px);
-		prevTime = curTime;
-	})
-
-	// setTimeout(gifff.pause, 1000);
-
-	// setTimeout(gifff.play, 2000);
+	//loop through the asset array and find the current one
+	for(var b = 0; b<assets.length; b++)
+	{
+    	console.log(b + ': ' + assets[b]);
+		var gifff = new gifFrames(assets[b]);
+		var prevTime = Date.now();
+		gifff.on('data', handler(b));
+	}
 
 }
 
