@@ -6,7 +6,7 @@ var async = require('async')
 
 
 var OPC = new require('./opc')
-var client = new OPC('192.168.2.1', 7890);
+var client = new OPC('localhost', 7890);
 
 var brightness = 0.3;
 var framesPerSecond = 10;
