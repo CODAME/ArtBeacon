@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 
-var fs = require('fs')
-  , gm = require('gm')
-  , PNG = require('pngjs').PNG
-  , async = require('async')
+var async = require('async')
   , opts = require("nomnom").parse()
-  , TMP_DIR = "./tmp"
   , gifFrames = require('./gif-frames');
 
 
@@ -15,8 +11,6 @@ var client = new OPC('192.168.2.1', 7890);
 var brightness = 0.3;
 var framesPerSecond = 10;
 
-var imageMagick = gm.subClass({ imageMagick: true });
-
 var pixels = [];
 
 
@@ -25,7 +19,7 @@ var gifName = opts['0'] || './codame.gif';
 var counter = 0;
 var images = [];
 
-// var frameDelay = parseInt(opts['1'], 10) || 200;
+
 
 
 
@@ -33,8 +27,8 @@ gifFrames.frames(gifName, function(err, frames) {
 	if (err) throw err;
 	gifFrames.frameRate(gifName, function(e, rate) {
 		if (e) throw e;
-		// frameDelay = rate;
-		start(frames, rate);
+		var frameDelay = opts['1'] ? parseInt(opts['1'], 10) : rate;
+		play(frames, rate);
 	});
 });
 
@@ -75,8 +69,7 @@ for (var y = 0; y < 32; y++) {
  
 
  
-function draw(data) {
-    var millis = new Date().getTime();
+function drawFrame(data) {
 
     for (var pixel = 0; pixel < 512; pixel++) {
         var x = pixel % 16,
@@ -89,17 +82,15 @@ function draw(data) {
         client.setPixel(imgCoordinateMap[pixel], red * brightness, green * brightness, blue * brightness);
     }
     client.writePixels();
-    
 }
 
 
 
-function start(images, framerate) {
-	// console.log(images[0]);
+function play(images, framerate) {
 	var frame = 0;
 	var px = images[0];
 	setInterval(function() {
-		draw(px);
+		drawFrame(px);
 	}, 1000/framesPerSecond);
 
 	process.nextTick(function() {
@@ -110,7 +101,7 @@ function start(images, framerate) {
 			}
 			px = images[frame];
 		}, framerate);
-	})
+	});
 
 
 }

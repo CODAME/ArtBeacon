@@ -10,33 +10,22 @@ tmp.setGracefulCleanup();
 
 
 
-module.exports.frames = function(gifName, cb) {
+module.exports.frames = function frames(gifName, cb) {
 
-	tmp.dir(function(tmpErr, TMP_DIR){
+	tmp.dir(function(tmpErr, tmpDir){
 		if (tmpErr) return cb(tmpErr);
 
-		var images = [];
+		var imgFrames = [];
 
-		// try {
-		// 	var files = fs.readdirSync(TMP_DIR);
-		// 	files.forEach(function(f) {
-		// 		fs.unlink(TMP_DIR + '/' + f);
-		// 	});
-		// 	fs.rmdirSync(TMP_DIR);
-		// }
-		// catch (err) {}
-		// fs.mkdirSync(TMP_DIR);
-
-
-		imageMagick(gifName).resize(16, 32, "!").write(TMP_DIR + '/frames.png', function(e) {
-			var files = fs.readdirSync(TMP_DIR);
+		imageMagick(gifName).resize(16, 32, "!").write(tmpDir + '/frames.png', function(e) {
+			var files = fs.readdirSync(tmpDir);
 
 			async.each(files, function(file, next) {
 				if (file.indexOf('.png') === -1) {
 					return next();
 				}
 
-				fs.createReadStream(TMP_DIR + '/' + file)
+				fs.createReadStream(tmpDir + '/' + file)
 				    .pipe(new PNG({
 				        filterType: 4
 				    }))
@@ -49,12 +38,12 @@ module.exports.frames = function(gifName, cb) {
 
 				            }
 				        }
-				        images.push(px);
+				        imgFrames.push(px);
 				        next();
 				    });
 
 			}, function(err) {
-				cb(err, images);
+				cb(err, imgFrames);
 			});
 
 		});
@@ -63,7 +52,7 @@ module.exports.frames = function(gifName, cb) {
 
 };
 
-module.exports.frameRate = function(gifName, cb) {
+module.exports.frameRate = function frameRate(gifName, cb) {
 	gm(gifName).identify(function(err, data) {
 		if (err) {
 			return cb(err);
@@ -78,3 +67,5 @@ module.exports.frameRate = function(gifName, cb) {
 	});
 };
 
+
+module.exports.stream = function(gifName, cb) {}
