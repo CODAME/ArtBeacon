@@ -87,7 +87,7 @@ GIF.prototype.init = function(cb) {
 		GIF.frames(self._filename, function(err, frames) {
 			if (err) throw err;
 			GIF.frameRate(self._filename, function(e, rate) {
-				if (e) rate = 150;
+				if (e) throw e;
 				self._frames = frames;
 				self._frameRate = rate;
 				self._isReady = true;
